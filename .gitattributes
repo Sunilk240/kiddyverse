@@ -1,0 +1,34 @@
+# Auto-detect text files and normalize line endings in the repository
+* text=auto
+
+# Common text file types
+*.js  text
+*.jsx text
+*.ts  text
+*.tsx text
+*.json text
+*.css text
+*.scss text
+*.html text
+*.md  text
+*.yml text
+*.yaml text
+*.env text
+
+# Windows scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+
+# Ensure Git does not attempt EOL conversion in node_modules (safety if any remain tracked)
+backend/node_modules/** -text
+frontend/node_modules/** -text
+

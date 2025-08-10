@@ -180,7 +180,17 @@ export default function App() {
   };
 
   const runOCR = async () => {
-    if (!files.length) { alert('Please upload image(s) first.'); return; }
+    if (!files.length) { alert('Please add images or PDFs first.'); return; }
+    const isAllowedFile = (file) => {
+      if (!file || !file.type) return false;
+      return file.type.startsWith('image/') || file.type === 'application/pdf';
+    };
+    const invalidFiles = files.filter((f) => !isAllowedFile(f));
+    if (invalidFiles.length > 0) {
+      const names = invalidFiles.map((f) => f?.name || '(unnamed)').join(', ');
+      alert(`Only image files (JPG, PNG, etc.) and PDFs are allowed. Remove invalid files: ${names}`);
+      return;
+    }
     const th = Math.max(0, Math.min(100, parseInt(threshold || 75, 10)));
     setStatus(mode === 'gemini' ? 'Uploading to server…' : 'Running Tesseract…');
     // Reset all derived state for a fresh session

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
+import { useForm, ValidationError } from '@formspree/react';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -102,13 +103,18 @@ export default function App() {
   const [lang, setLang] = useLocalStorage('lang', 'eng');
   const [threshold, setThreshold] = useLocalStorage('threshold', 75);
 
+  // Feedback (Formspree)
+  const formspreeId = (import.meta.env && import.meta.env.VITE_FORMSPREE_ID) ? import.meta.env.VITE_FORMSPREE_ID : '';
+  const formspreeEndpoint = formspreeId ? `https://formspree.io/f/${formspreeId}` : '';
+  const [fsState, fsHandleSubmit] = useForm(formspreeId || 'placeholder');
+
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState('Idle');
   const [progress, setProgress] = useState(0);
   const [progLabel, setProgLabel] = useState('');
   const [combinedLines, setCombinedLines] = useLocalStorage('ocrCombinedLines', []);
   const [ocrReady, setOcrReady] = useState(false);
-  const [activeTab, setActiveTab] = useState(null); // 'summarize' | 'qa' | 'translate'
+  const [activeTab, setActiveTab] = useState(null); // 'ocr' | 'summarize' | 'qa' | 'translate'
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [summary, setSummary] = useLocalStorage('summary', '');
@@ -119,6 +125,11 @@ export default function App() {
 
   const [question, setQuestion] = useLocalStorage('question', '');
   const [answer, setAnswer] = useLocalStorage('answer', '');
+
+  const [feedbackName, setFeedbackName] = useLocalStorage('feedbackName', '');
+  const [feedbackFeature, setFeedbackFeature] = useLocalStorage('feedbackFeature', '');
+  const [feedbackStatus, setFeedbackStatus] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const combinedText = useMemo(() => (Array.isArray(combinedLines) ? combinedLines.join('\n') : ''), [combinedLines]);
 
@@ -229,7 +240,7 @@ export default function App() {
       setCombinedLines(combined);
       setStatus('Done');
       setOcrReady(true);
-      setActiveTab('summarize');
+      setActiveTab('ocr');
       try { localStorage.setItem('ocrLastPassage', combined.join('\n')); } catch {}
     } catch (err) {
       console.warn('OCR flow error:', err);
@@ -287,6 +298,39 @@ export default function App() {
     } catch (e) { setAnswer('Error: ' + (e && e.message ? e.message : String(e))); }
   };
 
+  const submitFeedback = async () => {
+    setFeedbackStatus('');
+    if (!formspreeEndpoint) { setFeedbackStatus('Form is not configured. Add VITE_FORMSPREE_ID.'); return; }
+    const name = String(feedbackName || '').trim();
+    const feature = String(feedbackFeature || '').trim();
+    if (!name || !feature) { setFeedbackStatus('Please enter your name and the requested feature.'); return; }
+    try {
+      setIsSubmittingFeedback(true);
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('feature', feature);
+      formData.append('_subject', 'Kiddyverse Feedback');
+      formData.append('_origin', window.location.origin);
+      const res = await fetch(formspreeEndpoint, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: formData,
+      });
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const j = await res.json(); if (j && j.errors && j.errors.length) msg += `: ${j.errors.map(e => e.message).join(', ')}`; } catch {}
+        setFeedbackStatus(`Error sending feedback: ${msg}`);
+        return;
+      }
+      setFeedbackStatus('Thanks! Your feedback has been sent.');
+      setFeedbackFeature('');
+    } catch (e) {
+      setFeedbackStatus('Error sending feedback: ' + (e && e.message ? e.message : String(e)) + '. If this persists, try disabling ad blockers or network filters.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   const extractDisabled = !files.length || isProcessing;
   const translationClean = Array.isArray(translations) ? translations.join('\n') : (translations || '').toString();
 
@@ -295,6 +339,7 @@ export default function App() {
       <header className="header">
         <h1 style={{ margin: 0 }}>Kiddyverse</h1>
         <p className="subtitle">OCR with Tesseract and Gemini fallback. Summarize, Translate, and Q&amp;A.</p>
+        <p> Note: For simple images use Tesseract only mode. For complex images use Gemini only mode.</p>
       </header>
 
       <div className="card section">
@@ -339,10 +384,27 @@ export default function App() {
         <>
           <div className="card section">
             <div className="tabBar">
+              <button className={`tabButton ${activeTab === 'ocr' ? 'active' : ''}`} onClick={() => setActiveTab('ocr')}>OCR</button>
               <button className={`tabButton ${activeTab === 'summarize' ? 'active' : ''}`} onClick={() => setActiveTab('summarize')}>Summarize</button>
               <button className={`tabButton ${activeTab === 'qa' ? 'active' : ''}`} onClick={() => setActiveTab('qa')}>Question &amp; Answer</button>
               <button className={`tabButton ${activeTab === 'translate' ? 'active' : ''}`} onClick={() => setActiveTab('translate')}>Translations</button>
+              <button className={`tabButton ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => setActiveTab('feedback')}>Feedback</button>
             </div>
+
+            {activeTab === 'ocr' && (
+              <div className="section">
+                <div className="row cols-2">
+                  <div className="label">Extracted Text</div>
+                  <div style={{ display: 'flex', alignItems: 'end', gap: 8 }}>
+                    <button className="button ghost" onClick={() => speak(combinedText, 'English')} disabled={!combinedText}>🔊 Speak</button>
+                    <button className="button ghost" onClick={() => downloadTextFile('ocr-extracted.txt', combinedText)} disabled={!combinedText}>Download</button>
+                  </div>
+                </div>
+                <div className="section">
+                  <pre>{combinedText || '(no text extracted yet)'}</pre>
+                </div>
+              </div>
+            )}
 
             {activeTab === 'summarize' && (
               <div className="section">
@@ -398,6 +460,37 @@ export default function App() {
                   <div className="label">Translation</div>
                   <pre>{translationClean}</pre>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'feedback' && (
+              <div className="section">
+                {!formspreeId ? (
+                  <div className="hint">Set VITE_FORMSPREE_ID in your environment to enable this form.</div>
+                ) : fsState.succeeded ? (
+                  <p>Thanks! Your feedback has been sent.</p>
+                ) : (
+                  <form onSubmit={fsHandleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="row cols-2">
+                      <div>
+                        <div className="label">Your Name</div>
+                        <input className="input" name="name" value={feedbackName} onChange={(e) => setFeedbackName(e.target.value)} placeholder="Name" required />
+                        <ValidationError prefix="Name" field="name" errors={fsState.errors} />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="label">Requested Feature</div>
+                      <textarea className="input" name="feature" rows={6} value={feedbackFeature} onChange={(e) => setFeedbackFeature(e.target.value)} placeholder="Describe the feature or improvement you want" required />
+                      <ValidationError prefix="Feature" field="feature" errors={fsState.errors} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="button primary" type="submit" disabled={fsState.submitting}>
+                        {fsState.submitting ? 'Sending…' : 'Send Feedback'}
+                      </button>
+                      {feedbackStatus && <div className="hint" aria-live="polite">{feedbackStatus}</div>}
+                    </div>
+                  </form>
+                )}
               </div>
             )}
           </div>

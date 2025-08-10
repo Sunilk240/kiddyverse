@@ -4,6 +4,7 @@ import cors from 'cors';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+// Removed Python-based PDF OCR path in favor of client-side PDF rendering
 
 const app = express();
 
@@ -27,8 +28,20 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Helper to register routes at /, /v1, and /v2 simultaneously
+function registerRoute(method, path, middlewares, handler) {
+  const paths = [path, `/v1${path}`, `/v2${path}`];
+  for (const p of paths) {
+    if (Array.isArray(middlewares) && middlewares.length > 0) {
+      app[method](p, ...middlewares, handler);
+    } else {
+      app[method](p, handler);
+    }
+  }
+}
+
 // Health
-app.get('/health', (_req, res) => {
+registerRoute('get', '/health', [], (_req, res) => {
   res.json({ ok: true });
 });
 
@@ -48,7 +61,7 @@ function splitIntoLinesPreservingStructure(text) {
 }
 
 // OCR (Gemini multimodal)
-app.post('/ocr/gemini', upload.array('images', 10), async (req, res) => {
+registerRoute('post', '/ocr/gemini', [upload.array('images', 10)], async (req, res) => {
   try {
     if (!geminiApiKey) return res.status(500).json({ error: 'Server not configured for Gemini OCR' });
     const files = req.files || [];
@@ -74,8 +87,9 @@ app.post('/ocr/gemini', upload.array('images', 10), async (req, res) => {
   }
 });
 
+
 // Summarize (class-based)
-app.post('/summarize', async (req, res) => {
+registerRoute('post', '/summarize', [], async (req, res) => {
   try {
     if (!geminiApiKey) return res.status(500).json({ error: 'Server not configured for Gemini' });
     const { text, classLevel, ageLevel } = req.body || {};
@@ -130,7 +144,7 @@ ${text}
 });
 
 // Translate – keep structure
-app.post('/translate', async (req, res) => {
+registerRoute('post', '/translate', [], async (req, res) => {
   try {
     if (!geminiApiKey) return res.status(500).json({ error: 'Server not configured for Gemini' });
     const { lines, text, sourceLang, targetLang } = req.body || {};
@@ -174,7 +188,7 @@ app.post('/translate', async (req, res) => {
 });
 
 // Q&A – strict context only
-app.post('/qa', async (req, res) => {
+registerRoute('post', '/qa', [], async (req, res) => {
   try {
     if (!geminiApiKey) return res.status(500).json({ error: 'Server not configured for Gemini' });
     const { question, text, lines } = req.body || {};

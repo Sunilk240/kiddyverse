@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 
 function useLocalStorage(key, initialValue) {
   const [value, setValue] = useState(() => {
@@ -132,6 +135,15 @@ export default function App() {
     return res.json();
   }, [endpoint]);
 
+  const runServerOCRPdf = useCallback(async (file) => {
+    const url = `${endpoint.replace(/\/$/, '')}/ocr/pdf`;
+    const form = new FormData();
+    form.append('pdf', file, file.name || 'document.pdf');
+    const res = await fetch(url, { method: 'POST', body: form });
+    if (!res.ok) { const text = await res.text(); throw new Error(`PDF OCR failed (${res.status}): ${text}`); }
+    return res.json();
+  }, [endpoint]);
+
   const tesseractRecognizeSingle = useCallback(async (file, langCode) => {
     const { data } = await Tesseract.recognize(file, langCode, {
       logger: (m) => {
@@ -172,6 +184,30 @@ export default function App() {
     try {
       for (let i = 0; i < files.length; i += 1) {
         const originalFile = files[i];
+        if (originalFile && originalFile.type === 'application/pdf') {
+          setProgLabel(`Rendering PDF (${i + 1}/${files.length}): ${originalFile.name || 'document.pdf'}`);
+          const pdfData = new Uint8Array(await originalFile.arrayBuffer());
+          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width; canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.92));
+            const pageFile = new File([blob], `pdf-page-${pageNum}.png`, { type: 'image/png' });
+
+            // For PDF pages, prefer server OCR path to leverage Gemini
+            setStatus('Processing PDF page on server…');
+            const serverRes = await runServerOCRSingle(pageFile);
+            const pageLines = Array.isArray(serverRes.lines) ? serverRes.lines : [];
+            if (combined.length > 0) combined.push(`=== PDF Page ${pageNum} End ===`);
+            combined.push(...pageLines);
+          }
+          continue;
+        }
+
         const file = await resizeImageFile(originalFile, 2000);
         let source = 'tesseract';
         let text = '';
@@ -282,8 +318,8 @@ export default function App() {
             </select>
           </div>
           <div>
-            <div className="label">Images</div>
-            <input className="input" type="file" accept="image/*;capture=camera" multiple onChange={onPickFiles} />
+            <div className="label">Images or PDF</div>
+            <input className="input" type="file" accept="image/*,application/pdf" multiple onChange={onPickFiles} />
           </div>
         </div>
 

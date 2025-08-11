@@ -109,6 +109,7 @@ export default function App() {
   const [fsState, fsHandleSubmit] = useForm(formspreeId || 'placeholder');
 
   const [files, setFiles] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useLocalStorage('currentSessionId', '');
   const [status, setStatus] = useState('Idle');
   const [progress, setProgress] = useState(0);
   const [progLabel, setProgLabel] = useState('');
@@ -125,6 +126,88 @@ export default function App() {
 
   const [question, setQuestion] = useLocalStorage('question', '');
   const [answer, setAnswer] = useLocalStorage('answer', '');
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  // Session archiving helpers (logical folders in localStorage)
+  function generateTimestampSlug(date = new Date()) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`;
+  }
+
+  function readJsonSafe(key, fallback) {
+    try { const t = localStorage.getItem(key); return t ? JSON.parse(t) : fallback; } catch { return fallback; }
+  }
+
+  function writeJsonSafe(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }
+
+  async function fileToDataUrl(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function createNewSessionFromFiles(inputFiles) {
+    const firstName = (inputFiles[0] && inputFiles[0].name) ? inputFiles[0].name : 'files';
+    const base = String(firstName).replace(/\.[^.]+$/, '');
+    const sessionSummaryKey = 'sessions';
+    const sessions = readJsonSafe(sessionSummaryKey, []);
+    const existingIds = new Set((sessions || []).map((s) => s.id));
+
+    // Find a unique id: base, base 2, base 3, ...
+    let id = base;
+    if (existingIds.has(id)) {
+      let suffix = 2;
+      while (existingIds.has(`${base} ${suffix}`)) suffix += 1;
+      id = `${base} ${suffix}`;
+    }
+
+    // Build metadata for uploaded files
+    const filesMeta = [];
+    for (const f of inputFiles) {
+      const isImage = f && f.type && f.type.startsWith('image/');
+      const preview = isImage ? await fileToDataUrl(f) : null;
+      filesMeta.push({ name: f.name, type: f.type || '', size: f.size || 0, preview });
+    }
+
+    const nowIso = new Date().toISOString();
+    const sessionObj = { id, title: id, timestamp: nowIso, files: filesMeta, results: { ocr: '', summarize: '', translations: [], qa: [] } };
+    const newSessions = [{ id, title: id, timestamp: nowIso }, ...sessions].slice(0, 50);
+    writeJsonSafe(sessionSummaryKey, newSessions);
+    writeJsonSafe(`session:${id}`, sessionObj);
+    setCurrentSessionId(id);
+    return id;
+  }
+
+  function updateSessionResult(partial) {
+    const id = currentSessionId;
+    if (!id) return;
+    const key = `session:${id}`;
+    const sess = readJsonSafe(key, null);
+    if (!sess || !sess.results) return;
+    const newResults = { ...sess.results };
+    if (partial.ocr !== undefined) newResults.ocr = partial.ocr || '';
+    if (partial.summarize !== undefined) newResults.summarize = partial.summarize || '';
+    if (partial.translations !== undefined) newResults.translations = Array.isArray(partial.translations) ? partial.translations : [];
+    const merged = { ...sess, results: newResults };
+    writeJsonSafe(key, merged);
+  }
+
+  function appendSessionQa(questionText, answerText) {
+    const id = currentSessionId;
+    if (!id) return;
+    const key = `session:${id}`;
+    const sess = readJsonSafe(key, null);
+    if (!sess || !sess.results) return;
+    const qa = Array.isArray(sess.results.qa) ? sess.results.qa.slice() : [];
+    qa.push({ q: questionText, a: answerText, at: new Date().toISOString() });
+    const merged = { ...sess, results: { ...sess.results, qa } };
+    writeJsonSafe(key, merged);
+  }
 
   const [feedbackName, setFeedbackName] = useLocalStorage('feedbackName', '');
   const [feedbackFeature, setFeedbackFeature] = useLocalStorage('feedbackFeature', '');
@@ -146,14 +229,7 @@ export default function App() {
     return res.json();
   }, [endpoint]);
 
-  const runServerOCRPdf = useCallback(async (file) => {
-    const url = `${endpoint.replace(/\/$/, '')}/ocr/pdf`;
-    const form = new FormData();
-    form.append('pdf', file, file.name || 'document.pdf');
-    const res = await fetch(url, { method: 'POST', body: form });
-    if (!res.ok) { const text = await res.text(); throw new Error(`PDF OCR failed (${res.status}): ${text}`); }
-    return res.json();
-  }, [endpoint]);
+  // Note: PDF pages are rendered client-side and sent as images via runServerOCRSingle
 
   const tesseractRecognizeSingle = useCallback(async (file, langCode) => {
     const { data } = await Tesseract.recognize(file, langCode, {
@@ -203,6 +279,8 @@ export default function App() {
 
     const combined = [];
     try {
+      // Create a new logical session for this run
+      await createNewSessionFromFiles(files);
       for (let i = 0; i < files.length; i += 1) {
         const originalFile = files[i];
         if (originalFile && originalFile.type === 'application/pdf') {
@@ -252,6 +330,7 @@ export default function App() {
       setOcrReady(true);
       setActiveTab('ocr');
       try { localStorage.setItem('ocrLastPassage', combined.join('\n')); } catch {}
+      updateSessionResult({ ocr: combined.join('\n') });
     } catch (err) {
       console.warn('OCR flow error:', err);
       setStatus('Error: ' + (err && err.message ? err.message : String(err)));
@@ -272,7 +351,9 @@ export default function App() {
       const bodyText = await res.text();
       let data = null; try { data = JSON.parse(bodyText); } catch {}
       if (!res.ok) { setSummary(`HTTP ${res.status}: ${data?.error || bodyText}`); return; }
-      setSummary((data && data.summary) ? data.summary : '(empty)');
+      const textOut = (data && data.summary) ? data.summary : '(empty)';
+      setSummary(textOut);
+      updateSessionResult({ summarize: textOut });
     } catch (e) { setSummary('Error: ' + (e && e.message ? e.message : String(e))); }
   };
 
@@ -289,6 +370,7 @@ export default function App() {
       const arr = Array.isArray(data?.translations) ? data.translations : [];
       setTranslations(arr);
       try { localStorage.setItem('ocrLastTranslation', (arr || []).join('\n')); } catch {}
+      updateSessionResult({ translations: arr });
     } catch (e) { setTranslations(['Error: ' + (e && e.message ? e.message : String(e))]); }
   };
 
@@ -304,7 +386,9 @@ export default function App() {
       const bodyText = await res.text();
       let data = null; try { data = JSON.parse(bodyText); } catch {}
       if (!res.ok) { setAnswer(`HTTP ${res.status}: ${data?.error || bodyText}`); return; }
-      setAnswer((data && data.answer) ? data.answer : '(empty)');
+      const ans = (data && data.answer) ? data.answer : '(empty)';
+      setAnswer(ans);
+      appendSessionQa(q, ans);
     } catch (e) { setAnswer('Error: ' + (e && e.message ? e.message : String(e))); }
   };
 
@@ -390,16 +474,14 @@ export default function App() {
         </div>
       </div>
 
-      {!ocrReady ? null : (
-        <>
-          <div className="card section">
-            <div className="tabBar">
-              <button className={`tabButton ${activeTab === 'ocr' ? 'active' : ''}`} onClick={() => setActiveTab('ocr')}>OCR</button>
-              <button className={`tabButton ${activeTab === 'summarize' ? 'active' : ''}`} onClick={() => setActiveTab('summarize')}>Summarize</button>
-              <button className={`tabButton ${activeTab === 'qa' ? 'active' : ''}`} onClick={() => setActiveTab('qa')}>Question &amp; Answer</button>
-              <button className={`tabButton ${activeTab === 'translate' ? 'active' : ''}`} onClick={() => setActiveTab('translate')}>Translations</button>
-              <button className={`tabButton ${activeTab === 'feedback' ? 'active' : ''}`} onClick={() => setActiveTab('feedback')}>Feedback</button>
-            </div>
+      {ocrReady && (
+        <div className="card section">
+          <div className="tabBar">
+            <button className={`tabButton ${activeTab === 'ocr' ? 'active' : ''}`} onClick={() => setActiveTab('ocr')}>OCR</button>
+            <button className={`tabButton ${activeTab === 'summarize' ? 'active' : ''}`} onClick={() => setActiveTab('summarize')}>Summarize</button>
+            <button className={`tabButton ${activeTab === 'qa' ? 'active' : ''}`} onClick={() => setActiveTab('qa')}>Question &amp; Answer</button>
+            <button className={`tabButton ${activeTab === 'translate' ? 'active' : ''}`} onClick={() => setActiveTab('translate')}>Translations</button>
+          </div>
 
             {activeTab === 'ocr' && (
               <div className="section">
@@ -473,39 +555,200 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'feedback' && (
-              <div className="section">
-                {!formspreeId ? (
-                  <div className="hint">Set VITE_FORMSPREE_ID in your environment to enable this form.</div>
-                ) : fsState.succeeded ? (
-                  <p>Thanks! Your feedback has been sent.</p>
-                ) : (
-                  <form onSubmit={fsHandleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div className="row cols-2">
-                      <div>
-                        <div className="label">Your Name</div>
-                        <input className="input" name="name" value={feedbackName} onChange={(e) => setFeedbackName(e.target.value)} placeholder="Name" required />
-                        <ValidationError prefix="Name" field="name" errors={fsState.errors} />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="label">Requested Feature</div>
-                      <textarea className="input" name="feature" rows={6} value={feedbackFeature} onChange={(e) => setFeedbackFeature(e.target.value)} placeholder="Describe the feature or improvement you want" required />
-                      <ValidationError prefix="Feature" field="feature" errors={fsState.errors} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="button primary" type="submit" disabled={fsState.submitting}>
-                        {fsState.submitting ? 'Sending…' : 'Send Feedback'}
-                      </button>
-                      {feedbackStatus && <div className="hint" aria-live="polite">{feedbackStatus}</div>}
-                    </div>
-                  </form>
-                )}
+        </div>
+      )}
+
+      <div className="card section">
+        <div className="tabBar">
+          <button
+            className={`tabButton ${isHistoryOpen ? 'active' : ''}`}
+            onClick={() => {
+              setIsHistoryOpen(true);
+              setIsFeedbackOpen(false);
+            }}
+          >
+            History
+          </button>
+          <button
+            className={`tabButton ${isFeedbackOpen ? 'active' : ''}`}
+            onClick={() => {
+              setIsFeedbackOpen(true);
+              setIsHistoryOpen(false);
+            }}
+          >
+            Feedback
+          </button>
+        </div>
+      </div>
+
+      {isHistoryOpen && (
+        <div className="card section">
+          <h3 style={{ marginTop: 0 }}>History</h3>
+          <HistoryView currentSessionId={currentSessionId} />
+        </div>
+      )}
+
+      {isFeedbackOpen && (
+        <div className="card section">
+          <h3 style={{ marginTop: 0 }}>Feedback</h3>
+          {!formspreeId ? (
+            <div className="hint">Set VITE_FORMSPREE_ID in your environment to enable this form.</div>
+          ) : fsState.succeeded ? (
+            <p>Thanks! Your feedback has been sent.</p>
+          ) : (
+            <form onSubmit={fsHandleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="row cols-2">
+                <div>
+                  <div className="label">Your Name</div>
+                  <input className="input" name="name" value={feedbackName} onChange={(e) => setFeedbackName(e.target.value)} placeholder="Name" required />
+                  <ValidationError prefix="Name" field="name" errors={fsState.errors} />
+                </div>
               </div>
-            )}
-          </div>
-        </>
+              <div>
+                <div className="label">Requested Feature</div>
+                <textarea className="input" name="feature" rows={6} value={feedbackFeature} onChange={(e) => setFeedbackFeature(e.target.value)} placeholder="Describe the feature or improvement you want" required />
+                <ValidationError prefix="Feature" field="feature" errors={fsState.errors} />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="button primary" type="submit" disabled={fsState.submitting}>
+                  {fsState.submitting ? 'Sending…' : 'Send Feedback'}
+                </button>
+                {feedbackStatus && <div className="hint" aria-live="polite">{feedbackStatus}</div>}
+              </div>
+            </form>
+          )}
+        </div>
       )}
     </div>
   );
 } 
+
+function HistoryView({ currentSessionId }) {
+  const [sessions, setSessions] = useState([]);
+  const [selectedId, setSelectedId] = useState(currentSessionId || '');
+  const [sessionData, setSessionData] = useState(null);
+  const [expandSummary, setExpandSummary] = useState(false);
+  const [expandTranslations, setExpandTranslations] = useState(false);
+  const [expandQa, setExpandQa] = useState(false);
+
+  function clearHistory() {
+    const ok = window.confirm('This will permanently delete all history stored. Continue?');
+    if (!ok) return;
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k === 'sessions' || k === 'currentSessionId' || k.startsWith('session:')) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    setSessions([]);
+    setSelectedId('');
+    setSessionData(null);
+    setExpandSummary(false);
+    setExpandTranslations(false);
+    setExpandQa(false);
+  }
+
+  useEffect(() => {
+    try {
+      const arr = JSON.parse(localStorage.getItem('sessions') || '[]');
+      setSessions(Array.isArray(arr) ? arr : []);
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = selectedId || (sessions[0]?.id || '');
+    if (!id) { setSessionData(null); return; }
+    try { setSessionData(JSON.parse(localStorage.getItem(`session:${id}`) || 'null')); } catch { setSessionData(null); }
+  }, [selectedId, sessions]);
+
+  if (!sessions.length) {
+    return <div className="hint">No history yet. Run OCR to create a new session.</div>;
+  }
+
+  return (
+    <div className="section">
+      <div className="row cols-2" style={{ alignItems: 'end' }}>
+        <div>
+          <div className="label">Sessions</div>
+          <select className="select" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+            <option value="">Latest</option>
+            {sessions.map(s => (
+              <option key={s.id} value={s.id}>{s.id}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {sessions.length > 0 && (
+            <button className="button ghost" onClick={clearHistory} aria-label="Clear all history">Clear History</button>
+          )}
+        </div>
+      </div>
+
+      {!sessionData ? (
+        <div className="hint" style={{ marginTop: 8 }}>Select a session to view details.</div>
+      ) : (
+        <div className="section">
+          <div className="label">Input Files</div>
+          <ul>
+            {(sessionData.files || []).map((f, idx) => (
+              <li key={idx} style={{ marginBottom: 8 }}>
+                <div>{f.name} ({f.type}, {f.size} bytes)</div>
+                {f.preview && (<img src={f.preview} alt={f.name} style={{ maxWidth: 200, display: 'block', marginTop: 4 }} />)}
+              </li>
+            ))}
+          </ul>
+
+          <button className="button" onClick={() => setExpandSummary(v => !v)} style={{ marginTop: 8 }}>
+            {expandSummary ? 'Hide' : 'Show'} Summarize Result
+          </button>
+          {!expandSummary ? (
+            <div className="hint">{sessionData.results?.summarize ? 'Click to view summary' : 'Not used this feature yet'}</div>
+          ) : (
+            <pre>{sessionData.results?.summarize || 'Not used this feature yet'}</pre>
+          )}
+
+          <button className="button" onClick={() => setExpandTranslations(v => !v)} style={{ marginTop: 8 }}>
+            {expandTranslations ? 'Hide' : 'Show'} Translations
+          </button>
+          {!expandTranslations ? (
+            <div className="hint">{Array.isArray(sessionData.results?.translations) && sessionData.results.translations.length ? 'Click to view translations' : 'Not used this feature yet'}</div>
+          ) : (
+            <pre>{Array.isArray(sessionData.results?.translations) && sessionData.results.translations.length ? sessionData.results.translations.join('\n') : 'Not used this feature yet'}</pre>
+          )}
+
+          <button className="button" onClick={() => setExpandQa(v => !v)} style={{ marginTop: 8 }}>
+            {expandQa ? 'Hide' : 'Show'} Q&A
+          </button>
+          {!expandQa ? (
+            <div className="hint">{Array.isArray(sessionData.results?.qa) && sessionData.results.qa.length ? 'Click to view Q&A history' : 'Not used this feature yet'}</div>
+          ) : (
+            <>
+              {Array.isArray(sessionData.results?.qa) && sessionData.results.qa.length ? (
+                <ul>
+                  {sessionData.results.qa.map((x, i) => (
+                    <li key={i}>
+                      <strong>Q:</strong> {x.q}
+                      <br />
+                      <strong>A:</strong> {x.a}
+                      <br />
+                      <span className="hint">{x.at}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div>Not used this feature yet</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

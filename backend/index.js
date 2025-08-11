@@ -208,7 +208,7 @@ registerRoute('post', '/qa', [], async (req, res) => {
 
     const modelName = process.env.MODEL_QA || 'gemini-1.5-flash';
     const model = genAI.getGenerativeModel({ model: modelName });
-    const prompt = `You are a strict extraction-based QA assistant. Use ONLY the provided CONTEXT to answer. If the answer is not explicitly contained in the context, reply exactly with: "I don't know based on the passage." Do not add any outside knowledge. Return only the answer text.\n\nCONTEXT:\n${context}\n\nQUESTION: ${question}`;
+    const prompt = `You are a strict extraction-based QA assistant. Use ONLY the provided CONTEXT to answer. If the answer is not contained in the context, reply exactly with: "I can only answer based on the information provided not outside the context." Do not add any outside knowledge. Return only the answer text.\n\nCONTEXT:\n${context}\n\nQUESTION: ${question}`;
 
     const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
     const response = await result.response;

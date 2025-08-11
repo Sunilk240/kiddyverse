@@ -102,6 +102,9 @@ export default function App() {
   const [mode, setMode] = useLocalStorage('mode', 'auto'); // auto | tesseract | gemini
   const [lang, setLang] = useLocalStorage('lang', 'eng');
   const [threshold, setThreshold] = useLocalStorage('threshold', 75);
+  const maxPdfMBRaw = (import.meta.env && import.meta.env.VITE_MAX_PDF_MB) ? parseFloat(import.meta.env.VITE_MAX_PDF_MB) : 10;
+  const maxPdfMB = Number.isFinite(maxPdfMBRaw) && maxPdfMBRaw > 0 ? maxPdfMBRaw : 10;
+  const maxPdfBytes = maxPdfMB * 1024 * 1024;
 
   // Feedback (Formspree)
   const formspreeId = (import.meta.env && import.meta.env.VITE_FORMSPREE_ID) ? import.meta.env.VITE_FORMSPREE_ID : '';
@@ -217,7 +220,14 @@ export default function App() {
   const combinedText = useMemo(() => (Array.isArray(combinedLines) ? combinedLines.join('\n') : ''), [combinedLines]);
 
   const onPickFiles = (e) => {
-    setFiles(Array.from(e.target.files || []));
+    const picked = Array.from(e.target.files || []);
+    const tooLarge = picked.filter((f) => f && f.type === 'application/pdf' && typeof f.size === 'number' && f.size > maxPdfBytes);
+    if (tooLarge.length) {
+      const names = tooLarge.map((f) => `${f.name} (${(f.size / (1024*1024)).toFixed(1)} MB)`).join(', ');
+      alert(`Some PDFs exceed the maximum size of ${maxPdfMB} MB and were ignored: ${names}`);
+    }
+    const accepted = picked.filter((f) => !(f && f.type === 'application/pdf' && typeof f.size === 'number' && f.size > maxPdfBytes));
+    setFiles(accepted);
   };
 
   const runServerOCRSingle = useCallback(async (file) => {
@@ -257,6 +267,12 @@ export default function App() {
 
   const runOCR = async () => {
     if (!files.length) { alert('Please add images or PDFs first.'); return; }
+    const oversizedPdfs = files.filter((f) => f && f.type === 'application/pdf' && typeof f.size === 'number' && f.size > maxPdfBytes);
+    if (oversizedPdfs.length) {
+      const names = oversizedPdfs.map((f) => `${f.name} (${(f.size / (1024*1024)).toFixed(1)} MB)`).join(', ');
+      alert(`PDF size limit is ${maxPdfMB} MB. Remove oversized PDFs: ${names}`);
+      return;
+    }
     const isAllowedFile = (file) => {
       if (!file || !file.type) return false;
       return file.type.startsWith('image/') || file.type === 'application/pdf';

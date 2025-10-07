@@ -631,6 +631,50 @@
   }
 }
 
+/* Floating Animation for Feedback Button */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Fade in animation for modal backdrop */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Modal appearance animation */
+@keyframes modalAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* Encouraging Messages */
 .encouragement {
   padding: var(--space-4);
@@ -803,5 +847,22 @@
   
   .text-display-box {
     max-height: 600px;
+  }
+}
+
+/* Feedback Button Mobile Adjustments */
+@media (max-width: 640px) {
+  .fixed.bottom-6.right-6 {
+    bottom: 1rem;
+    right: 1rem;
+  }
+  
+  .fixed.bottom-6.right-6 button {
+    min-width: 50px;
+    min-height: 50px;
+  }
+  
+  .fixed.bottom-6.right-6 button span {
+    font-size: 1.5rem;
   }
 }

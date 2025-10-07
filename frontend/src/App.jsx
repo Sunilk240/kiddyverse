@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from './components/Header'
 import UploadSection from './components/UploadSection'
 import ResultsTabs from './components/ResultsTabs'
 import UserGuide from './components/UserGuide'
 import Footer from './components/Footer'
+import FeedbackHandler from './components/FeedbackButton'
 
 function App() {
   // Application state
@@ -14,6 +15,7 @@ function App() {
   const [processingMessage, setProcessingMessage] = useState('')
   const [showUserGuide, setShowUserGuide] = useState(false)
   const [gradeLevel, setGradeLevel] = useState('7')
+
 
   // Handle OCR processing success
   const handleUploadSuccess = (result) => {
@@ -114,6 +116,9 @@ function App() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Feedback Form Handler */}
+      <FeedbackHandler />
     </div>
   )
 }

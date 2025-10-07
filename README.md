@@ -158,6 +158,7 @@ graph LR
 - **🎯 Clear Navigation**: Prominent tabs with descriptive labels
 - **💬 Encouraging Language**: Positive, supportive messaging
 - **🔄 Visual Feedback**: Progress indicators and status updates
+- **💭 Feedback System**: Integrated Formspree feedback collection
 
 ### 🛡️ Reliability Features
 
@@ -272,6 +273,9 @@ Visit `http://localhost:5173` in your browser and start learning! 🎉
 VITE_API_BASE_URL=http://localhost:8080
 VITE_MAX_PDF_MB=10
 VITE_MAX_IMAGES=5
+
+# Optional: Feedback Form (Formspree)
+VITE_FORMSPREE_ID=your_formspree_form_id
 ```
 
 #### Backend (.env)

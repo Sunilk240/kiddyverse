@@ -151,7 +151,7 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
             Awesome! I found your text!
           </h2>
           <p className="text-gray-700 text-lg font-medium">
-            I extracted <span className="font-bold text-primary">{extractedText.length} characters</span> of text. 
+            I extracted <span className="font-bold text-primary">{extractedText.length} characters</span> of text.
             <br />
             <span className="text-accent-green font-bold">Now choose what you want to do with it!</span>
           </p>
@@ -168,7 +168,7 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
             Click on any of these awesome features to get started:
           </p>
         </div>
-        
+
         <div className="card-body">
           {/* Enhanced Tab Buttons */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -178,8 +178,8 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
                 onClick={() => setActiveTab(tab.id)}
                 className={`
                   relative p-4 rounded-2xl border-2 transition-all duration-300 hover-lift
-                  ${activeTab === tab.id 
-                    ? `bg-gradient-to-br ${tab.color} text-white border-transparent shadow-xl animate-pulse-glow` 
+                  ${activeTab === tab.id
+                    ? `bg-gradient-to-br ${tab.color} text-white border-transparent shadow-xl animate-pulse-glow`
                     : 'bg-white border-gray-200 text-gray-700 hover:border-primary/50 hover:shadow-lg'
                   }
                 `}
@@ -195,7 +195,7 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
                     {tab.description}
                   </div>
                 </div>
-                
+
                 {activeTab === tab.id && (
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
                     <span className="text-xs">✨</span>
@@ -207,156 +207,156 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
 
           {/* Tab Content */}
           <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 min-h-[300px]">
-          {/* Extracted Text Tab */}
-          {activeTab === 'text' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">📄 Extracted Text</h3>
-                <button
-                  onClick={() => copyToClipboard(extractedText)}
-                  className="btn btn-outline btn-sm"
-                >
-                  📋 Copy
-                </button>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm">
-                  {extractedText || 'No text extracted yet.'}
-                </pre>
-              </div>
-            </div>
-          )}
-
-          {/* Summary Tab */}
-          {activeTab === 'summary' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">📝 Summary for Grade {gradeLevel}</h3>
-                <button
-                  onClick={handleSummarize}
-                  disabled={isLoading || !extractedText.trim()}
-                  className="btn btn-primary btn-sm"
-                >
-                  {isLoading ? 'Creating...' : '✨ Summarize'}
-                </button>
-              </div>
-              
-              {summary && (
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="whitespace-pre-wrap text-sm">
-                      {summary}
-                    </div>
-                  </div>
+            {/* Extracted Text Tab */}
+            {activeTab === 'text' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">📄 Extracted Text</h3>
                   <button
-                    onClick={() => copyToClipboard(summary)}
+                    onClick={() => copyToClipboard(extractedText)}
                     className="btn btn-outline btn-sm"
                   >
-                    📋 Copy Summary
+                    📋 Copy
                   </button>
                 </div>
-              )}
-              
-              {!summary && !isLoading && (
-                <div className="text-center py-8 text-gray-500">
-                  Click "Summarize" to get a grade-appropriate summary of your content
+                <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm">
+                    {extractedText || 'No text extracted yet.'}
+                  </pre>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Translation Tab */}
-          {activeTab === 'translate' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">🌍 Translate Text</h3>
-              
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value)}
-                  placeholder="Enter target language (e.g., Hindi, Spanish)"
-                  className="input flex-1"
-                />
-                <button
-                  onClick={handleTranslate}
-                  disabled={isLoading || !extractedText.trim() || !targetLanguage.trim()}
-                  className="btn btn-primary"
-                >
-                  {isLoading ? 'Translating...' : '🔄 Translate'}
-                </button>
               </div>
-              
-              {translation && (
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
-                    <div className="whitespace-pre-wrap text-sm">
-                      {translation}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(translation)}
-                    className="btn btn-outline btn-sm"
-                  >
-                    📋 Copy Translation
-                  </button>
-                </div>
-              )}
-              
-              {!translation && !isLoading && (
-                <div className="text-center py-8 text-gray-500">
-                  Enter a language and click "Translate" to translate your content
-                </div>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Q&A Tab */}
-          {activeTab === 'qa' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">❓ Ask Questions</h3>
-              
-              <div className="space-y-3">
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask a question about your content..."
-                  className="textarea"
-                  rows={3}
-                />
-                <button
-                  onClick={handleAskQuestion}
-                  disabled={isLoading || !extractedText.trim() || !question.trim()}
-                  className="btn btn-primary btn-full"
-                >
-                  {isLoading ? 'Thinking...' : '🤔 Get Answer'}
-                </button>
-              </div>
-              
-              {answer && (
-                <div className="space-y-3">
-                  <h4 className="font-medium">💡 Answer:</h4>
-                  <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
-                    <div className="whitespace-pre-wrap text-sm">
-                      {answer}
-                    </div>
-                  </div>
+            {/* Summary Tab */}
+            {activeTab === 'summary' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">📝 Summary for Grade {gradeLevel}</h3>
                   <button
-                    onClick={() => copyToClipboard(answer)}
-                    className="btn btn-outline btn-sm"
+                    onClick={handleSummarize}
+                    disabled={isLoading || !extractedText.trim()}
+                    className="btn btn-primary btn-sm"
                   >
-                    📋 Copy Answer
+                    {isLoading ? 'Creating...' : '✨ Summarize'}
                   </button>
                 </div>
-              )}
-              
-              {!answer && !isLoading && (
-                <div className="text-center py-8 text-gray-500">
-                  Ask any question about your content and I'll answer based on what I found
+
+                {summary && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <div className="whitespace-pre-wrap text-sm">
+                        {summary}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(summary)}
+                      className="btn btn-outline btn-sm"
+                    >
+                      📋 Copy Summary
+                    </button>
+                  </div>
+                )}
+
+                {!summary && !isLoading && (
+                  <div className="text-center py-8 text-gray-500">
+                    Click "Summarize" to get a grade-appropriate summary of your content
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Translation Tab */}
+            {activeTab === 'translate' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">🌍 Translate Text</h3>
+
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={targetLanguage}
+                    onChange={(e) => setTargetLanguage(e.target.value)}
+                    placeholder="Enter target language (e.g., Hindi, Spanish)"
+                    className="input flex-1"
+                  />
+                  <button
+                    onClick={handleTranslate}
+                    disabled={isLoading || !extractedText.trim() || !targetLanguage.trim()}
+                    className="btn btn-primary"
+                  >
+                    {isLoading ? 'Translating...' : '🔄 Translate'}
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+
+                {translation && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
+                      <div className="whitespace-pre-wrap text-sm">
+                        {translation}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(translation)}
+                      className="btn btn-outline btn-sm"
+                    >
+                      📋 Copy Translation
+                    </button>
+                  </div>
+                )}
+
+                {!translation && !isLoading && (
+                  <div className="text-center py-8 text-gray-500">
+                    Enter a language and click "Translate" to translate your content
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Q&A Tab */}
+            {activeTab === 'qa' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">❓ Ask Questions</h3>
+
+                <div className="space-y-3">
+                  <textarea
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Ask a question about your content..."
+                    className="textarea"
+                    rows={3}
+                  />
+                  <button
+                    onClick={handleAskQuestion}
+                    disabled={isLoading || !extractedText.trim() || !question.trim()}
+                    className="btn btn-primary btn-full"
+                  >
+                    {isLoading ? 'Thinking...' : '🤔 Get Answer'}
+                  </button>
+                </div>
+
+                {answer && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium">💡 Answer:</h4>
+                    <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
+                      <div className="whitespace-pre-wrap text-sm">
+                        {answer}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(answer)}
+                      className="btn btn-outline btn-sm"
+                    >
+                      📋 Copy Answer
+                    </button>
+                  </div>
+                )}
+
+                {!answer && !isLoading && (
+                  <div className="text-center py-8 text-gray-500">
+                    Ask any question about your content and I'll answer based on what I found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -47,22 +47,29 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS configuration
-allowed_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173").split(",")
+# CORS configuration - Allow both frontend URLs
+allowed_origins = [
+    "http://localhost:5173",  # Local development
+    "https://kiddy-verse.onrender.com",  # Production frontend (with hyphen)
+    "https://kiddyverse.onrender.com",   # Alternative frontend URL
+    "*"  # Allow all for now
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if allowed_origins != [""] else ["*"],
+    allow_origins=allowed_origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
-# Universal middleware to handle double slash URLs
+# Universal middleware to handle double slash URLs and add CORS headers
 @app.middleware("http")
-async def fix_double_slash_middleware(request: Request, call_next):
-    """Fix double slash URLs by redirecting to single slash."""
+async def fix_double_slash_and_cors_middleware(request: Request, call_next):
+    """Fix double slash URLs and ensure CORS headers are present."""
     original_path = request.url.path
+    origin = request.headers.get("origin", "*")
     
     # Check if path has double slashes (but not root //)
     if "//" in original_path and original_path != "/":
@@ -81,10 +88,20 @@ async def fix_double_slash_middleware(request: Request, call_next):
         
         # Process the fixed request
         response = await call_next(fixed_request)
-        return response
+    else:
+        # Normal processing for correct URLs
+        response = await call_next(request)
     
-    # Normal processing for correct URLs
-    response = await call_next(request)
+    # Add CORS headers to all responses
+    if origin in ["https://kiddy-verse.onrender.com", "https://kiddyverse.onrender.com", "http://localhost:5173"]:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE, PATCH"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    response.headers["Access-Control-Allow-Credentials"] = "false"
+    
     return response
 
 # Pydantic models for V2.0
@@ -122,6 +139,28 @@ class HealthResponse(BaseModel):
     api_status: dict
 
 
+
+# Catch-all OPTIONS handler (must be before other routes)
+@app.options("/{path:path}")
+async def universal_options_handler(request: Request, path: str):
+    """Handle ALL OPTIONS requests for CORS preflight."""
+    origin = request.headers.get("origin", "*")
+    logger.info(f"🔍 OPTIONS REQUEST: /{path} from origin: {origin}")
+    
+    return JSONResponse(
+        content={"message": "CORS preflight successful", "path": f"/{path}", "origin": origin},
+        headers={
+            "Access-Control-Allow-Origin": origin if origin in [
+                "https://kiddy-verse.onrender.com",
+                "https://kiddyverse.onrender.com", 
+                "http://localhost:5173"
+            ] else "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, PATCH",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+            "Access-Control-Max-Age": "86400",
+            "Access-Control-Allow-Credentials": "false",
+        }
+    )
 
 # Routes
 @app.get("/")
@@ -332,17 +371,7 @@ async def get_storage_stats(request: Request):
     """Get storage statistics for monitoring."""
     return session_storage.get_storage_stats()
 
-@app.options("/{path:path}")
-async def options_handler(path: str):
-    """Handle OPTIONS requests for CORS preflight."""
-    return JSONResponse(
-        content={"message": "CORS preflight successful"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
+
 
 @app.get("/ocr-methods")
 async def get_ocr_methods():

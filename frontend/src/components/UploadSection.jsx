@@ -222,19 +222,27 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
             formData.append('files', file)
         })
 
+        console.log('🔍 STEP 1: Uploading files to backend...')
         const uploadResponse = await fetch(getApiUrl('/upload-files'), {
             method: 'POST',
             body: formData
         })
 
+        console.log('🔍 UPLOAD RESPONSE STATUS:', uploadResponse.status)
         const uploadResult = await uploadResponse.json()
+        console.log('🔍 UPLOAD RESULT:', uploadResult)
         
         if (!uploadResult.success) {
+            console.error('❌ UPLOAD FAILED:', uploadResult.message)
             throw new Error(uploadResult.message || 'Upload failed')
         }
 
+        console.log('✅ UPLOAD SUCCESSFUL, Session ID:', uploadResult.session_id)
+
         // Process with OCR
         updateProcessingMessage('AI is reading your handwritten text...')
+        console.log('🔍 STEP 2: Starting OCR processing...')
+        
         const ocrResponse = await fetch(getApiUrl('/extract-text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -244,11 +252,16 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
             })
         })
 
+        console.log('🔍 OCR RESPONSE STATUS:', ocrResponse.status)
         const ocrResult = await ocrResponse.json()
+        console.log('🔍 OCR RESULT:', ocrResult)
         
         if (!ocrResult.success) {
+            console.error('❌ OCR FAILED:', ocrResult.message)
             throw new Error(ocrResult.message || 'OCR processing failed')
         }
+
+        console.log('✅ OCR SUCCESSFUL')
 
         // Format results for the app
         const processedResults = {

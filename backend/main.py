@@ -47,13 +47,12 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS configuration - Allow both frontend URLs
-allowed_origins = [
-    "http://localhost:5173",  # Local development
-    "https://kiddy-verse.onrender.com",  # Production frontend (with hyphen)
-    "https://kiddyverse.onrender.com",   # Alternative frontend URL
-    "*"  # Allow all for now
-]
+# CORS configuration - Use environment variable for allowed origins
+allowed_origins_env = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
+# Support multiple origins separated by commas
+allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
+logger.info(f"🔒 CORS Allowed Origins: {allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,11 +91,14 @@ async def fix_double_slash_and_cors_middleware(request: Request, call_next):
         # Normal processing for correct URLs
         response = await call_next(request)
     
-    # Add CORS headers to all responses
-    if origin in ["https://kiddy-verse.onrender.com", "https://kiddyverse.onrender.com", "http://localhost:5173"]:
+    # Add CORS headers to all responses using environment variable
+    allowed_origins_env = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
+    allowed_origins_list = [origin.strip() for origin in allowed_origins_env.split(",")]
+    
+    if origin in allowed_origins_list:
         response.headers["Access-Control-Allow-Origin"] = origin
     else:
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Origin"] = allowed_origins_list[0]
     
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE, PATCH"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin"
@@ -147,14 +149,14 @@ async def universal_options_handler(request: Request, path: str):
     origin = request.headers.get("origin", "*")
     logger.info(f"🔍 OPTIONS REQUEST: /{path} from origin: {origin}")
     
+    # Get allowed origins from environment
+    allowed_origins_env = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
+    allowed_origins_list = [origin.strip() for origin in allowed_origins_env.split(",")]
+    
     return JSONResponse(
         content={"message": "CORS preflight successful", "path": f"/{path}", "origin": origin},
         headers={
-            "Access-Control-Allow-Origin": origin if origin in [
-                "https://kiddy-verse.onrender.com",
-                "https://kiddyverse.onrender.com", 
-                "http://localhost:5173"
-            ] else "*",
+            "Access-Control-Allow-Origin": origin if origin in allowed_origins_list else allowed_origins_list[0],
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, PATCH",
             "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
             "Access-Control-Max-Age": "86400",

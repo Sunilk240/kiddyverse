@@ -22,7 +22,8 @@ VITE_API_BASE_URL=https://your-backend-url.com
 ### Required Environment Variables:
 ```
 PORT=8080
-ALLOWED_ORIGIN=https://your-frontend-url.com
+# CORS Configuration - Comma-separated list of allowed origins
+ALLOWED_ORIGIN=https://your-frontend-url.com,http://localhost:5173
 RATE_LIMIT_RPM=60
 
 # Dual Gemini API Keys

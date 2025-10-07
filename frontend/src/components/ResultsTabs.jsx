@@ -219,10 +219,10 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
                     📋 Copy
                   </button>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm">
+                <div className="text-display-box">
+                  <div className="text-display">
                     {extractedText || 'No text extracted yet.'}
-                  </pre>
+                  </div>
                 </div>
               </div>
             )}
@@ -243,8 +243,8 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
 
                 {summary && (
                   <div className="space-y-3">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="whitespace-pre-wrap text-sm">
+                    <div className="text-display-box">
+                      <div className="ai-response">
                         {summary}
                       </div>
                     </div>
@@ -289,8 +289,8 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
 
                 {translation && (
                   <div className="space-y-3">
-                    <div className="p-4 bg-gray-50 rounded-lg max-h-96 overflow-y-auto">
-                      <div className="whitespace-pre-wrap text-sm">
+                    <div className="text-display-box">
+                      <div className="ai-response">
                         {translation}
                       </div>
                     </div>
@@ -337,8 +337,10 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
                   <div className="space-y-3">
                     <h4 className="font-medium">💡 Answer:</h4>
                     <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-lg">
-                      <div className="whitespace-pre-wrap text-sm">
-                        {answer}
+                      <div className="text-display-box bg-transparent border-0 p-0 max-h-96">
+                        <div className="ai-response">
+                          {answer}
+                        </div>
                       </div>
                     </div>
                     <button

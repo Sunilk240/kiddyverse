@@ -20,6 +20,67 @@ from file_processor import file_processor, FileProcessingResult
 from ocr_pipeline import ocr_pipeline, OCRPipelineResult
 from session_storage import session_storage
 
+def format_ai_response(text: str) -> str:
+    """
+    Format AI response to be more readable and remove unnecessary formatting.
+    """
+    if not text:
+        return text
+    
+    # Remove common AI response prefixes/suffixes
+    unwanted_phrases = [
+        "Here is the summary:",
+        "Here's the summary:",
+        "Summary:",
+        "Here is the translation:",
+        "Here's the translation:",
+        "Translation:",
+        "Based on the text:",
+        "Based on the content:",
+        "I hope this helps",
+        "Hope this helps",
+        "Let me know if you need anything else",
+        "Feel free to ask if you have questions"
+    ]
+    
+    cleaned_text = text.strip()
+    
+    # Remove unwanted phrases (case insensitive)
+    for phrase in unwanted_phrases:
+        # Remove from beginning
+        if cleaned_text.lower().startswith(phrase.lower()):
+            cleaned_text = cleaned_text[len(phrase):].strip()
+        # Remove from end
+        if cleaned_text.lower().endswith(phrase.lower()):
+            cleaned_text = cleaned_text[:-len(phrase)].strip()
+    
+    # Clean up markdown formatting for better display
+    # Convert **bold** to proper formatting
+    import re
+    cleaned_text = re.sub(r'\*\*(.*?)\**', r'\1', cleaned_text)  # Remove bold markdown
+    cleaned_text = re.sub(r'\*(.*?)\*', r'\1', cleaned_text)     # Remove italic markdown
+    
+    # Improve line breaks - ensure proper spacing between bullet points
+    lines = cleaned_text.split('\n')
+    formatted_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        if line:
+            # Add proper spacing for bullet points
+            if line.startswith('•') or line.startswith('-') or line.startswith('*'):
+                formatted_lines.append(line)
+            else:
+                formatted_lines.append(line)
+    
+    # Join with proper line breaks
+    result = '\n'.join(formatted_lines).strip()
+    
+    # Remove any trailing punctuation that might be artifacts
+    result = re.sub(r'[.!?]+$', '', result).strip()
+    
+    return result
+
 # Configure detailed logging
 logging.basicConfig(
     level=logging.INFO,
@@ -444,22 +505,20 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
         # Step 2: Create grade-appropriate prompt
         logger.info("🔍 STEP 2: Creating grade-appropriate prompt...")
         grade_level = summarize_request.classLevel
-        prompt = f"""
-        Please create a summary of the following text that is appropriate for a grade {grade_level} student (age {int(grade_level) + 5}-{int(grade_level) + 6}).
+        prompt = f"""Summarize this text for a grade {grade_level} student. Use simple language and focus only on the main points from the given content.
 
-        Guidelines:
-        - Use simple, clear language appropriate for the grade level
-        - Keep sentences short and easy to understand
-        - Focus on the main ideas and key points
-        - Make it engaging and helpful for homework
-        - Use encouraging, positive tone
-        - Aim for 3-5 key points maximum
+IMPORTANT RULES:
+- Only summarize what is actually in the text
+- Do not add extra information or explanations
+- Do not include phrases like "This text is about" or "Hope this helps"
+- Use bullet points for clarity
+- Keep it concise and factual
+- Use proper line breaks between points
 
-        Text to summarize:
-        {summarize_request.text}
+Text to summarize:
+{summarize_request.text}
 
-        Please provide a clear, student-friendly summary:
-        """
+Summary:"""
         
         logger.info(f"✅ PROMPT CREATED: {len(prompt)} characters for grade {grade_level}")
         
@@ -482,7 +541,6 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
         # Step 4: Process response
         logger.info("🔍 STEP 4: Processing Gemini response...")
         logger.info(f"🔍 RESPONSE TYPE: {type(response)}")
-        logger.info(f"🔍 RESPONSE ATTRIBUTES: {dir(response)}")
         
         if hasattr(response, 'text'):
             summary_text = response.text
@@ -491,6 +549,8 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
             summary_text = str(response)
             logger.info(f"✅ CONVERTED RESPONSE TO STRING: {len(summary_text)} chars")
         
+        # Clean and format the response
+        summary_text = format_ai_response(summary_text)
         logger.info(f"✅ SUMMARY CREATED SUCCESSFULLY: {len(summary_text)} characters")
         
         return {
@@ -549,21 +609,18 @@ async def translate_text(request: Request, translate_request: TranslateRequest):
             )
         
         # Create translation prompt
-        prompt = f"""
-        Please translate the following text to {translate_request.targetLang}.
+        prompt = f"""Translate this text to {translate_request.targetLang}. Provide only the translation without any additional comments or explanations.
 
-        Guidelines:
-        - Provide accurate, natural translation
-        - Maintain the original meaning and context
-        - Use appropriate formality level for students
-        - If the text contains educational content, preserve the learning value
-        - If translation is not possible, explain why in a student-friendly way
+IMPORTANT RULES:
+- Provide only the direct translation
+- Do not add phrases like "Here is the translation" or "I hope this helps"
+- Maintain the original formatting and structure
+- If unable to translate, respond with "Translation not possible"
 
-        Text to translate:
-        {translate_request.text}
+Text to translate:
+{translate_request.text}
 
-        Please provide the translation in {translate_request.targetLang}:
-        """
+Translation:"""
         
         # Generate translation using Gemini
         response = await api_manager.generate_content(
@@ -573,6 +630,8 @@ async def translate_text(request: Request, translate_request: TranslateRequest):
         
         translation_text = response.text if hasattr(response, 'text') else str(response)
         
+        # Clean and format the response
+        translation_text = format_ai_response(translation_text)
         logger.info(f"✅ Translation completed: {len(translation_text)} characters")
         
         return {
@@ -625,24 +684,21 @@ async def answer_question(request: Request, qa_request: QARequest):
             )
         
         # Create Q&A prompt
-        prompt = f"""
-        You are a helpful educational assistant for students. Based on the following content, please answer the student's question.
+        prompt = f"""Answer this question based only on the provided content. Give a direct, factual answer without unnecessary introductions or conclusions.
 
-        Guidelines:
-        - Provide clear, accurate answers appropriate for students
-        - Use simple, encouraging language
-        - If the answer isn't in the content, say so politely
-        - Give helpful explanations that aid learning
-        - Be supportive and positive
-        - If the question is unclear, ask for clarification
+IMPORTANT RULES:
+- Answer only based on the given content
+- If the answer is not in the content, say "This information is not available in the provided text"
+- Do not add phrases like "Based on the text" or "I hope this helps"
+- Keep the answer concise and to the point
+- Use proper formatting with line breaks if needed
 
-        Content:
-        {qa_request.text}
+Content:
+{qa_request.text}
 
-        Student's Question: {qa_request.question}
+Question: {qa_request.question}
 
-        Please provide a helpful answer:
-        """
+Answer:"""
         
         # Generate answer using Gemini
         response = await api_manager.generate_content(
@@ -652,6 +708,8 @@ async def answer_question(request: Request, qa_request: QARequest):
         
         answer_text = response.text if hasattr(response, 'text') else str(response)
         
+        # Clean and format the response
+        answer_text = format_ai_response(answer_text)
         logger.info(f"✅ Question answered: {len(answer_text)} characters")
         
         return {

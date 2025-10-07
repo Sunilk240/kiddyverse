@@ -666,6 +666,105 @@
   transform: translateY(0px) rotate(0deg) scale(0.98);
 }
 
+/* Text Display Components - Better Formatting */
+.text-display {
+  font-family: var(--font-primary);
+  line-height: 1.6;
+  color: var(--gray-800);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.text-display-box {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-400) var(--gray-100);
+}
+
+.text-display-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.text-display-box::-webkit-scrollbar-track {
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+}
+
+.text-display-box::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-md);
+}
+
+.text-display-box::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
+
+/* AI Response Formatting */
+.ai-response {
+  font-family: var(--font-primary);
+  line-height: 1.7;
+  color: var(--gray-800);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.ai-response p {
+  margin-bottom: var(--space-3);
+}
+
+.ai-response ul,
+.ai-response ol {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-6);
+}
+
+.ai-response li {
+  margin-bottom: var(--space-2);
+}
+
+.ai-response strong {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.ai-response em {
+  font-style: italic;
+  color: var(--gray-700);
+}
+
+/* Better Bullet Points */
+.ai-response ul li::marker {
+  content: "• ";
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.ai-response ol li::marker {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+/* Code-like text formatting */
+.ai-response code {
+  background: var(--gray-100);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
 /* Responsive Adjustments */
 @media (min-width: 640px) {
   .tab-list {
@@ -678,6 +777,11 @@
   
   .emoji-large {
     font-size: 2.5rem;
+  }
+  
+  .text-display-box {
+    font-size: 1rem;
+    max-height: 500px;
   }
 }
 
@@ -695,5 +799,9 @@
   
   .emoji-large {
     font-size: 3rem;
+  }
+  
+  .text-display-box {
+    max-height: 600px;
   }
 }

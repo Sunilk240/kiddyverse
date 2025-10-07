@@ -135,16 +135,25 @@ class APIManager:
     
     async def generate_content(self, model: str, contents: Any, **kwargs) -> Any:
         """Generate content with automatic failover on errors."""
+        logger.info(f"🤖 GEMINI API CALL - Model: {model}")
+        logger.info(f"🔑 USING KEY: {'backup' if self.using_backup else 'primary'}")
+        
         client = await self.get_client()
         
         if not client:
+            logger.error("❌ NO API CLIENT AVAILABLE")
             raise Exception("No API keys available")
         
         # Track request count
         key_type = "backup" if self.using_backup else "primary"
         self.request_counts[key_type] += 1
+        logger.info(f"📊 REQUEST COUNT - {key_type}: {self.request_counts[key_type]}")
         
         try:
+            logger.info("🔍 CALLING GEMINI API...")
+            logger.info(f"🔍 CONTENT TYPE: {type(contents)}")
+            logger.info(f"🔍 CONTENT LENGTH: {len(str(contents))} chars")
+            
             # Use the correct API format
             response = client.models.generate_content(
                 model=model,
@@ -152,29 +161,42 @@ class APIManager:
                 **kwargs
             )
             
+            logger.info("✅ GEMINI API CALL SUCCESSFUL")
+            logger.info(f"✅ RESPONSE TYPE: {type(response)}")
+            
             # Success - reset any error states
             if self.using_backup and self._should_retry_primary():
-                # Try primary again on next request
-                pass
+                logger.info("🔄 Will try primary key on next request")
             
             return response
             
         except Exception as e:
-            logger.error(f"❌ API error with {key_type} key: {e}")
+            logger.error(f"❌ GEMINI API ERROR with {key_type} key: {str(e)}")
+            logger.error(f"❌ ERROR TYPE: {type(e).__name__}")
+            logger.error(f"❌ ERROR DETAILS: {repr(e)}")
+            
+            # Log full traceback for debugging
+            import traceback
+            logger.error(f"❌ FULL TRACEBACK:\n{traceback.format_exc()}")
             
             # Handle different types of errors
             if self._is_rate_limit_error(e):
+                logger.warning(f"⚠️ RATE LIMIT ERROR on {key_type} key")
                 if not self.using_backup and self.backup_client:
                     # Rate limited on primary, try backup
+                    logger.info("🔄 ATTEMPTING FAILOVER TO BACKUP KEY...")
                     if self._failover_to_backup(f"Rate limit on primary: {e}"):
                         return await self.generate_content(model, contents, **kwargs)
                 else:
                     # Rate limited on backup too
+                    logger.error("❌ BOTH API KEYS ARE RATE LIMITED")
                     raise Exception("Both API keys are rate limited. Please try again later.")
             
             elif self._is_api_key_error(e):
+                logger.warning(f"⚠️ API KEY ERROR on {key_type} key")
                 if not self.using_backup and self.backup_client:
                     # API key issue on primary, try backup
+                    logger.info("🔄 ATTEMPTING FAILOVER TO BACKUP KEY...")
                     if self._failover_to_backup(f"API key error on primary: {e}"):
                         return await self.generate_content(model, contents, **kwargs)
                 else:

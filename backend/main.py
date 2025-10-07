@@ -20,9 +20,17 @@ from file_processor import file_processor, FileProcessingResult
 from ocr_pipeline import ocr_pipeline, OCRPipelineResult
 from session_storage import session_storage
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure detailed logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Set specific loggers for debugging
+logging.getLogger("api_manager").setLevel(logging.DEBUG)
+logging.getLogger("ocr_pipeline").setLevel(logging.DEBUG)
+logging.getLogger("file_processor").setLevel(logging.DEBUG)
 
 # Load environment variables
 load_dotenv()
@@ -238,12 +246,16 @@ async def get_file_limits():
 @limiter.limit(f"{os.getenv('RATE_LIMIT_RPM', '60')}/minute")
 async def extract_text(request: Request, ocr_request: OCRRequest):
     """Extract text from uploaded files using sequential OCR processing."""
-    logger.info(f"🔍 Starting OCR for session: {ocr_request.session_id}")
+    logger.info(f"🔍 OCR REQUEST - Session: {ocr_request.session_id}, Handwritten: {ocr_request.is_handwritten}")
     
     try:
-        # Check if session exists
+        # Step 1: Check if session exists
+        logger.info("🔍 STEP 1: Checking session existence...")
         session_info = session_storage.get_session_info(ocr_request.session_id)
+        logger.info(f"🔍 SESSION INFO: {session_info}")
+        
         if not session_info.get("exists"):
+            logger.warning(f"❌ SESSION NOT FOUND: {ocr_request.session_id}")
             return OCRPipelineResult(
                 success=False,
                 message="😔 I can't find your uploaded files. Please upload them again.",
@@ -258,21 +270,46 @@ async def extract_text(request: Request, ocr_request: OCRRequest):
                 error_details="Session not found"
             )
         
-        # Process with OCR pipeline
-        result = await ocr_pipeline.process_session(
-            session_id=ocr_request.session_id,
-            is_handwritten=ocr_request.is_handwritten
-        )
+        logger.info(f"✅ SESSION FOUND: {ocr_request.session_id}")
+        
+        # Step 2: Process with OCR pipeline
+        logger.info("🔍 STEP 2: Starting OCR pipeline processing...")
+        logger.info(f"🤖 HANDWRITTEN MODE: {ocr_request.is_handwritten}")
+        
+        try:
+            result = await ocr_pipeline.process_session(
+                session_id=ocr_request.session_id,
+                is_handwritten=ocr_request.is_handwritten
+            )
+            logger.info("✅ OCR PIPELINE COMPLETED")
+            
+        except Exception as ocr_error:
+            logger.error(f"❌ OCR PIPELINE FAILED: {str(ocr_error)}")
+            logger.error(f"❌ OCR ERROR TYPE: {type(ocr_error).__name__}")
+            raise ocr_error
+        
+        # Step 3: Process results
+        logger.info("🔍 STEP 3: Processing OCR results...")
+        logger.info(f"🔍 OCR SUCCESS: {result.success}")
+        logger.info(f"🔍 FILES PROCESSED: {result.total_files_processed}")
+        logger.info(f"🔍 TEXT LENGTH: {len(result.combined_text)} characters")
         
         if result.success:
-            logger.info(f"✅ OCR completed for session {ocr_request.session_id}: {len(result.combined_text)} characters extracted")
+            logger.info(f"✅ OCR COMPLETED SUCCESSFULLY for session {ocr_request.session_id}")
         else:
-            logger.warning(f"❌ OCR failed for session {ocr_request.session_id}: {result.message}")
+            logger.warning(f"❌ OCR FAILED for session {ocr_request.session_id}: {result.message}")
         
         return result
         
     except Exception as e:
-        logger.error(f"Unexpected error in OCR processing: {e}")
+        logger.error(f"❌ OCR ENDPOINT FAILED: {str(e)}")
+        logger.error(f"❌ ERROR TYPE: {type(e).__name__}")
+        logger.error(f"❌ ERROR DETAILS: {repr(e)}")
+        
+        # Log the full traceback for debugging
+        import traceback
+        logger.error(f"❌ FULL TRACEBACK:\n{traceback.format_exc()}")
+        
         return OCRPipelineResult(
             success=False,
             message="😔 Something unexpected happened while reading your content.",
@@ -361,10 +398,13 @@ async def get_ocr_methods():
 @limiter.limit(f"{os.getenv('RATE_LIMIT_RPM', '60')}/minute")
 async def summarize_text(request: Request, summarize_request: SummarizeRequest):
     """Create grade-level appropriate summaries of extracted text."""
-    logger.info(f"📝 Creating summary for grade {summarize_request.classLevel}")
+    logger.info(f"📝 SUMMARIZE REQUEST - Grade: {summarize_request.classLevel}, Text length: {len(summarize_request.text)} chars")
     
     try:
+        # Step 1: Validate input
+        logger.info("🔍 STEP 1: Validating input text...")
         if not summarize_request.text.strip():
+            logger.warning("❌ VALIDATION FAILED: Empty text provided")
             return StudentFriendlyResponse(
                 success=False,
                 message="😔 I don't see any text to summarize!",
@@ -375,7 +415,10 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
                 ]
             )
         
-        # Create grade-appropriate prompt
+        logger.info(f"✅ VALIDATION PASSED: Text has {len(summarize_request.text)} characters")
+        
+        # Step 2: Create grade-appropriate prompt
+        logger.info("🔍 STEP 2: Creating grade-appropriate prompt...")
         grade_level = summarize_request.classLevel
         prompt = f"""
         Please create a summary of the following text that is appropriate for a grade {grade_level} student (age {int(grade_level) + 5}-{int(grade_level) + 6}).
@@ -394,15 +437,37 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
         Please provide a clear, student-friendly summary:
         """
         
-        # Generate summary using Gemini
-        response = await api_manager.generate_content(
-            model=os.getenv("MODEL_SUMMARIZE", "gemini-2.5-flash"),
-            contents=prompt
-        )
+        logger.info(f"✅ PROMPT CREATED: {len(prompt)} characters for grade {grade_level}")
         
-        summary_text = response.text if hasattr(response, 'text') else str(response)
+        # Step 3: Call Gemini API
+        logger.info("🔍 STEP 3: Calling Gemini API for summarization...")
+        logger.info(f"🤖 API MODEL: {os.getenv('MODEL_SUMMARIZE', 'gemini-2.5-flash')}")
         
-        logger.info(f"✅ Summary created: {len(summary_text)} characters")
+        try:
+            response = await api_manager.generate_content(
+                model=os.getenv("MODEL_SUMMARIZE", "gemini-2.5-flash"),
+                contents=prompt
+            )
+            logger.info("✅ GEMINI API CALL SUCCESSFUL")
+            
+        except Exception as api_error:
+            logger.error(f"❌ GEMINI API CALL FAILED: {str(api_error)}")
+            logger.error(f"❌ API ERROR TYPE: {type(api_error).__name__}")
+            raise api_error
+        
+        # Step 4: Process response
+        logger.info("🔍 STEP 4: Processing Gemini response...")
+        logger.info(f"🔍 RESPONSE TYPE: {type(response)}")
+        logger.info(f"🔍 RESPONSE ATTRIBUTES: {dir(response)}")
+        
+        if hasattr(response, 'text'):
+            summary_text = response.text
+            logger.info(f"✅ EXTRACTED TEXT FROM response.text: {len(summary_text)} chars")
+        else:
+            summary_text = str(response)
+            logger.info(f"✅ CONVERTED RESPONSE TO STRING: {len(summary_text)} chars")
+        
+        logger.info(f"✅ SUMMARY CREATED SUCCESSFULLY: {len(summary_text)} characters")
         
         return {
             "success": True,
@@ -413,7 +478,14 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
         }
         
     except Exception as e:
-        logger.error(f"❌ Summary generation failed: {e}")
+        logger.error(f"❌ SUMMARIZE ENDPOINT FAILED: {str(e)}")
+        logger.error(f"❌ ERROR TYPE: {type(e).__name__}")
+        logger.error(f"❌ ERROR DETAILS: {repr(e)}")
+        
+        # Log the full traceback for debugging
+        import traceback
+        logger.error(f"❌ FULL TRACEBACK:\n{traceback.format_exc()}")
+        
         return StudentFriendlyResponse(
             success=False,
             message="😔 I had trouble creating a summary right now.",

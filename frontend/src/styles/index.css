@@ -1,0 +1,516 @@
+/* Kiddyverse V2.0 - Mobile-First Student-Friendly Styles */
+
+/* CSS Custom Properties for Student-Friendly Design */
+:root {
+  /* Primary Colors - Bright and Encouraging */
+  --primary: #7C3AED;        /* Vibrant Purple */
+  --primary-light: #8B5CF6;  /* Lighter Purple */
+  --primary-dark: #5B21B6;   /* Darker Purple */
+  --secondary: #06B6D4;      /* Bright Cyan */
+  --secondary-light: #22D3EE; /* Lighter Cyan */
+  
+  /* Fun Accent Colors for Students */
+  --accent-pink: #EC4899;     /* Fun Pink */
+  --accent-orange: #F97316;   /* Energetic Orange */
+  --accent-yellow: #EAB308;   /* Sunny Yellow */
+  --accent-green: #22C55E;    /* Fresh Green */
+  --accent-blue: #3B82F6;     /* Sky Blue */
+  --accent-indigo: #6366F1;   /* Deep Indigo */
+  
+  /* Status Colors - Encouraging */
+  --success: #22C55E;        /* Bright Green */
+  --warning: #F59E0B;        /* Gentle Orange */
+  --error: #EF4444;          /* Soft Red */
+  --info: #3B82F6;           /* Friendly Blue */
+  
+  /* Neutral Colors - Clean and Readable */
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  
+  /* Background Gradients - Colorful and Welcoming */
+  --bg-gradient: linear-gradient(135deg, #FEF3C7 0%, #DBEAFE 50%, #F3E8FF 100%);
+  --card-gradient: linear-gradient(135deg, #FFFFFF 0%, #FEFCE8 100%);
+  --hero-gradient: linear-gradient(135deg, #A855F7 0%, #EC4899 50%, #F97316 100%);
+  
+  /* Fun Pattern Backgrounds */
+  --pattern-dots: radial-gradient(circle at 2px 2px, rgba(124, 58, 237, 0.15) 1px, transparent 0);
+  --pattern-grid: linear-gradient(rgba(124, 58, 237, 0.1) 1px, transparent 1px), 
+                  linear-gradient(90deg, rgba(124, 58, 237, 0.1) 1px, transparent 1px);
+  
+  /* Typography - Student-Friendly Fonts */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Spacing Scale - Touch-Friendly */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  
+  /* Border Radius - Friendly and Modern */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  
+  /* Shadows - Soft and Welcoming */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Touch Target Sizes - Mobile Optimized */
+  --touch-target: 44px;    /* Minimum touch target */
+  --touch-target-lg: 56px; /* Large touch target */
+  
+  /* Animation - Smooth and Delightful */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+  --bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Reset and Base Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-weight: 400;
+  color: var(--gray-800);
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Typography Scale - Student-Friendly */
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-base { font-size: 1rem; line-height: 1.5rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+.text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+
+.font-heading {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+/* Mobile-First Layout System */
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+/* Responsive Container Sizes */
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+    padding: var(--space-6);
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+    padding: var(--space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+/* Flexbox Utilities - Mobile Optimized */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+.flex-1 { flex: 1 1 0%; }
+.flex-auto { flex: 1 1 auto; }
+.flex-none { flex: none; }
+
+/* Grid System - Mobile-First */
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.gap-6 { gap: var(--space-6); }
+.gap-8 { gap: var(--space-8); }
+
+/* Responsive Grid */
+@media (min-width: 640px) {
+  .sm\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) {
+  .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .md\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .md\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Spacing Utilities */
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+.p-6 { padding: var(--space-6); }
+.p-8 { padding: var(--space-8); }
+
+.px-3 { padding-left: var(--space-3); padding-right: var(--space-3); }
+.px-4 { padding-left: var(--space-4); padding-right: var(--space-4); }
+.px-6 { padding-left: var(--space-6); padding-right: var(--space-6); }
+
+.py-2 { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.py-3 { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+.py-4 { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+
+.m-2 { margin: var(--space-2); }
+.m-4 { margin: var(--space-4); }
+.m-6 { margin: var(--space-6); }
+
+.mx-auto { margin-left: auto; margin-right: auto; }
+.my-4 { margin-top: var(--space-4); margin-bottom: var(--space-4); }
+.my-6 { margin-top: var(--space-6); margin-bottom: var(--space-6); }
+.my-8 { margin-top: var(--space-8); margin-bottom: var(--space-8); }
+
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mb-6 { margin-bottom: var(--space-6); }
+.mb-8 { margin-bottom: var(--space-8); }
+
+.mt-4 { margin-top: var(--space-4); }
+.mt-6 { margin-top: var(--space-6); }
+.mt-8 { margin-top: var(--space-8); }
+
+/* Width and Height Utilities */
+.w-full { width: 100%; }
+.w-auto { width: auto; }
+.w-fit { width: fit-content; }
+
+.h-full { height: 100%; }
+.h-auto { height: auto; }
+.h-screen { height: 100vh; }
+.min-h-screen { min-height: 100vh; }
+
+/* Color Utilities */
+.text-primary { color: var(--primary); }
+.text-secondary { color: var(--secondary); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-error { color: var(--error); }
+.text-gray-500 { color: var(--gray-500); }
+.text-gray-600 { color: var(--gray-600); }
+.text-gray-700 { color: var(--gray-700); }
+.text-gray-800 { color: var(--gray-800); }
+
+.bg-white { background-color: var(--white); }
+.bg-primary { background-color: var(--primary); }
+.bg-secondary { background-color: var(--secondary); }
+.bg-success { background-color: var(--success); }
+.bg-warning { background-color: var(--warning); }
+.bg-error { background-color: var(--error); }
+.bg-gray-50 { background-color: var(--gray-50); }
+.bg-gray-100 { background-color: var(--gray-100); }
+
+/* Border Utilities */
+.border { border: 1px solid var(--gray-200); }
+.border-2 { border: 2px solid var(--gray-200); }
+.border-primary { border-color: var(--primary); }
+.border-gray-200 { border-color: var(--gray-200); }
+.border-gray-300 { border-color: var(--gray-300); }
+
+.rounded { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+.rounded-full { border-radius: 9999px; }
+
+/* Shadow Utilities */
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* Transition Utilities */
+.transition { transition: all var(--transition-normal); }
+.transition-fast { transition: all var(--transition-fast); }
+.transition-slow { transition: all var(--transition-slow); }
+
+/* Visibility Utilities */
+.hidden { display: none; }
+.block { display: block; }
+.inline { display: inline; }
+.inline-block { display: inline-block; }
+
+/* Text Alignment */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* Responsive Utilities */
+@media (min-width: 640px) {
+  .sm\\:block { display: block; }
+  .sm\\:hidden { display: none; }
+  .sm\\:flex { display: flex; }
+  .sm\\:grid { display: grid; }
+  .sm\\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+  .sm\\:text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+}
+
+@media (min-width: 768px) {
+  .md\\:block { display: block; }
+  .md\\:hidden { display: none; }
+  .md\\:flex { display: flex; }
+  .md\\:grid { display: grid; }
+  .md\\:text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+  .md\\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+}
+
+@media (min-width: 1024px) {
+  .lg\\:block { display: block; }
+  .lg\\:hidden { display: none; }
+  .lg\\:flex { display: flex; }
+  .lg\\:grid { display: grid; }
+  .lg\\:text-2xl { font-size: 1.5rem; line-height: 2rem; }
+  .lg\\:text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+}
+
+/* Focus States - Accessibility */
+*:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Selection Styles */
+::selection {
+  background-color: var(--primary);
+  color: var(--white);
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-pink) 100%);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--accent-pink) 100%);
+}
+
+/* Fun Animations for Student Engagement */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes wiggle {
+  0%, 7% {
+    transform: rotateZ(0);
+  }
+  15% {
+    transform: rotateZ(-15deg);
+  }
+  20% {
+    transform: rotateZ(10deg);
+  }
+  25% {
+    transform: rotateZ(-10deg);
+  }
+  30% {
+    transform: rotateZ(6deg);
+  }
+  35% {
+    transform: rotateZ(-4deg);
+  }
+  40%, 100% {
+    transform: rotateZ(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(124, 58, 237, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.8), 0 0 30px rgba(236, 72, 153, 0.4);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes rainbow-border {
+  0% {
+    border-color: var(--accent-pink);
+  }
+  16.66% {
+    border-color: var(--accent-orange);
+  }
+  33.33% {
+    border-color: var(--accent-yellow);
+  }
+  50% {
+    border-color: var(--accent-green);
+  }
+  66.66% {
+    border-color: var(--accent-blue);
+  }
+  83.33% {
+    border-color: var(--accent-indigo);
+  }
+  100% {
+    border-color: var(--primary);
+  }
+}
+
+/* Student-Friendly Animation Classes */
+.animate-bounce-in {
+  animation: bounce-in 0.6s var(--bounce);
+}
+
+.animate-wiggle {
+  animation: wiggle 2s ease-in-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-rainbow-border {
+  animation: rainbow-border 3s linear infinite;
+}
+
+/* Hover Effects for Interactive Elements */
+.hover-lift {
+  transition: transform var(--transition-normal) var(--elastic);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.hover-glow {
+  transition: all var(--transition-normal);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+  filter: brightness(1.1);
+}
+
+/* Fun Background Patterns */
+.bg-pattern-dots {
+  background-image: var(--pattern-dots);
+  background-size: 20px 20px;
+}
+
+.bg-pattern-grid {
+  background-image: var(--pattern-grid);
+  background-size: 20px 20px;
+}
+
+/* Gradient Text Effects */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-pink) 50%, var(--accent-orange) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-success {
+  background: linear-gradient(135deg, var(--success) 0%, var(--accent-green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

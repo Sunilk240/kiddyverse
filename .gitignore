@@ -36,3 +36,10 @@ Thumbs.db
 backend/python/__pycache__/
 *.pyc
 
+.venv/
+
+test_*
+
+temp_v1_backup
+
+.kiro/

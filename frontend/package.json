@@ -1,7 +1,7 @@
 {
-  "name": "kiddyverse-frontend",
+  "name": "kiddyverse-v2-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,13 +9,14 @@
     "preview": "vite preview --port 5173"
   },
   "dependencies": {
-    "@formspree/react": "^3.0.0",
-    "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.3.3"
   }
 }

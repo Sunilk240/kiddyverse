@@ -8,6 +8,7 @@ import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -83,8 +84,30 @@ class HealthResponse(BaseModel):
     version: str = "2.0.0"
     api_status: dict
 
+# Middleware to handle double slashes and normalize URLs
+@app.middleware("http")
+async def normalize_path_middleware(request: Request, call_next):
+    """Normalize URLs by removing double slashes and handling common issues."""
+    # Fix double slashes in path
+    if "//" in request.url.path and request.url.path != "/":
+        normalized_path = request.url.path.replace("//", "/")
+        # Reconstruct URL with normalized path
+        normalized_url = request.url.replace(path=normalized_path)
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Invalid URL format",
+                "message": f"Double slashes detected. Try: {normalized_path}",
+                "correct_url": str(normalized_url).replace(str(request.url), str(normalized_url))
+            }
+        )
+    
+    response = await call_next(request)
+    return response
+
 # Routes
 @app.get("/")
+@app.head("/")
 async def root():
     """Root endpoint - Welcome message for KiddyVerse API."""
     return {
@@ -103,6 +126,7 @@ async def root():
     }
 
 @app.get("/health", response_model=HealthResponse)
+@app.head("/health", response_model=HealthResponse)
 @app.get("/v1/health", response_model=HealthResponse)
 @app.get("/v2/health", response_model=HealthResponse)
 async def health_check():
@@ -261,6 +285,18 @@ async def get_session_info(session_id: str):
 async def get_storage_stats(request: Request):
     """Get storage statistics for monitoring."""
     return session_storage.get_storage_stats()
+
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle OPTIONS requests for CORS preflight."""
+    return JSONResponse(
+        content={"message": "CORS preflight successful"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.get("/ocr-methods")
 async def get_ocr_methods():

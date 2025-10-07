@@ -39,13 +39,14 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
-allowed_origin = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173")
+allowed_origins = os.getenv("ALLOWED_ORIGIN", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[allowed_origin] if allowed_origin else ["*"],
+    allow_origins=allowed_origins if allowed_origins != [""] else ["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Pydantic models for V2.0
@@ -83,6 +84,24 @@ class HealthResponse(BaseModel):
     api_status: dict
 
 # Routes
+@app.get("/")
+async def root():
+    """Root endpoint - Welcome message for KiddyVerse API."""
+    return {
+        "message": "🚀 Welcome to KiddyVerse API - Where Learning Meets Magic! ✨",
+        "version": "2.0.3",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": {
+            "upload": "/upload-files",
+            "extract": "/extract-text", 
+            "summarize": "/summarize",
+            "translate": "/translate",
+            "qa": "/qa"
+        }
+    }
+
 @app.get("/health", response_model=HealthResponse)
 @app.get("/v1/health", response_model=HealthResponse)
 @app.get("/v2/health", response_model=HealthResponse)

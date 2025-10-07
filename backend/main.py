@@ -84,26 +84,42 @@ class HealthResponse(BaseModel):
     version: str = "2.0.0"
     api_status: dict
 
-# Middleware to handle double slashes and normalize URLs
-@app.middleware("http")
-async def normalize_path_middleware(request: Request, call_next):
-    """Normalize URLs by removing double slashes and handling common issues."""
-    # Fix double slashes in path
-    if "//" in request.url.path and request.url.path != "/":
-        normalized_path = request.url.path.replace("//", "/")
-        # Reconstruct URL with normalized path
-        normalized_url = request.url.replace(path=normalized_path)
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Invalid URL format",
-                "message": f"Double slashes detected. Try: {normalized_path}",
-                "correct_url": str(normalized_url).replace(str(request.url), str(normalized_url))
-            }
-        )
-    
-    response = await call_next(request)
-    return response
+# Handle common double slash URL issues
+@app.options("//summarize")
+async def options_double_slash_summarize():
+    """Handle OPTIONS request for //summarize (double slash issue)."""
+    return JSONResponse(
+        content={"message": "CORS preflight successful"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+@app.options("//translate")
+async def options_double_slash_translate():
+    """Handle OPTIONS request for //translate (double slash issue)."""
+    return JSONResponse(
+        content={"message": "CORS preflight successful"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+@app.options("//qa")
+async def options_double_slash_qa():
+    """Handle OPTIONS request for //qa (double slash issue)."""
+    return JSONResponse(
+        content={"message": "CORS preflight successful"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 # Routes
 @app.get("/")

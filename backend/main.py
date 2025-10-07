@@ -196,7 +196,6 @@ async def test_api_keys(request: Request):
             message="😔 Oops! I'm having trouble connecting right now.",
             suggestions=[
                 "Please try again in a few minutes",
-                "Make sure you have a good internet connection",
                 "Ask your teacher or parent for help if this keeps happening"
             ]
         )
@@ -491,7 +490,6 @@ async def summarize_text(request: Request, summarize_request: SummarizeRequest):
             message="😔 I had trouble creating a summary right now.",
             suggestions=[
                 "Please try again in a moment",
-                "Make sure your internet connection is working",
                 "The text might be too long - try with shorter content"
             ]
         )
@@ -569,7 +567,6 @@ async def translate_text(request: Request, translate_request: TranslateRequest):
                 "Please try again in a moment",
                 "Make sure you spelled the language name correctly",
                 "Try a more common language like 'Spanish' or 'French'",
-                "Check your internet connection"
             ]
         )
 
@@ -647,7 +644,6 @@ async def answer_question(request: Request, qa_request: QARequest):
             suggestions=[
                 "Please try asking your question again",
                 "Make sure your question is clear and specific",
-                "Check your internet connection",
                 "Try rephrasing your question in simpler words"
             ]
         )

@@ -58,6 +58,35 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+# Universal middleware to handle double slash URLs
+@app.middleware("http")
+async def fix_double_slash_middleware(request: Request, call_next):
+    """Fix double slash URLs by redirecting to single slash."""
+    original_path = request.url.path
+    
+    # Check if path has double slashes (but not root //)
+    if "//" in original_path and original_path != "/":
+        # Fix the path by replacing double slashes with single slash
+        fixed_path = original_path.replace("//", "/")
+        logger.info(f"🔄 FIXING DOUBLE SLASH: {original_path} -> {fixed_path}")
+        
+        # Create new scope with fixed path
+        scope = request.scope.copy()
+        scope["path"] = fixed_path
+        scope["raw_path"] = fixed_path.encode()
+        
+        # Create new request with fixed path
+        from starlette.requests import Request as StarletteRequest
+        fixed_request = StarletteRequest(scope, request.receive)
+        
+        # Process the fixed request
+        response = await call_next(fixed_request)
+        return response
+    
+    # Normal processing for correct URLs
+    response = await call_next(request)
+    return response
+
 # Pydantic models for V2.0
 class StudentFriendlyResponse(BaseModel):
     """Standard response format for student-friendly messages."""
@@ -92,42 +121,7 @@ class HealthResponse(BaseModel):
     version: str = "2.0.0"
     api_status: dict
 
-# Handle common double slash URL issues
-@app.options("//summarize")
-async def options_double_slash_summarize():
-    """Handle OPTIONS request for //summarize (double slash issue)."""
-    return JSONResponse(
-        content={"message": "CORS preflight successful"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
 
-@app.options("//translate")
-async def options_double_slash_translate():
-    """Handle OPTIONS request for //translate (double slash issue)."""
-    return JSONResponse(
-        content={"message": "CORS preflight successful"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
-
-@app.options("//qa")
-async def options_double_slash_qa():
-    """Handle OPTIONS request for //qa (double slash issue)."""
-    return JSONResponse(
-        content={"message": "CORS preflight successful"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
 
 # Routes
 @app.get("/")

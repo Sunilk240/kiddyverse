@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import ocrService from '../services/ocrService'
+import { getApiUrl } from '../utils/api'
 
 function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProcessingMessage }) {
     const [selectedFiles, setSelectedFiles] = useState([])
@@ -167,7 +168,6 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
 
     // Helper function to process failed files with Gemini
     const processFailedFilesWithGemini = async (failedFiles) => {
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
         
         // Upload failed files to backend
         const formData = new FormData()
@@ -175,7 +175,7 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
             formData.append('files', file)
         })
 
-        const uploadResponse = await fetch(`${apiBaseUrl}/upload-files`, {
+        const uploadResponse = await fetch(getApiUrl('/upload-files'), {
             method: 'POST',
             body: formData
         })
@@ -187,7 +187,7 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
         }
 
         // Process with Gemini OCR
-        const ocrResponse = await fetch(`${apiBaseUrl}/extract-text`, {
+        const ocrResponse = await fetch(getApiUrl('/extract-text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -215,8 +215,6 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
 
     // Backend processing with Gemini for handwritten text
     const processWithBackend = async () => {
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-        
         // Upload files to backend
         updateProcessingMessage('Uploading files for AI processing...')
         const formData = new FormData()
@@ -224,7 +222,7 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
             formData.append('files', file)
         })
 
-        const uploadResponse = await fetch(`${apiBaseUrl}/upload-files`, {
+        const uploadResponse = await fetch(getApiUrl('/upload-files'), {
             method: 'POST',
             body: formData
         })
@@ -237,7 +235,7 @@ function UploadSection({ onUploadSuccess, isProcessing, setIsProcessing, setProc
 
         // Process with OCR
         updateProcessingMessage('AI is reading your handwritten text...')
-        const ocrResponse = await fetch(`${apiBaseUrl}/extract-text`, {
+        const ocrResponse = await fetch(getApiUrl('/extract-text'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

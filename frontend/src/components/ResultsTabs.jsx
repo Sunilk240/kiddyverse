@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { apiRequest } from '../utils/api'
 
 function ResultsTabs({ extractedText, gradeLevel, onReset }) {
   const [activeTab, setActiveTab] = useState('text')
@@ -29,19 +30,13 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
     setSummary('Creating summary...')
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      const response = await fetch(`${apiBaseUrl}/summarize`, {
+      const result = await apiRequest('/summarize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           text: extractedText,
           classLevel: gradeLevel
         })
       })
-
-      const result = await response.json()
 
       if (result.summary) {
         setSummary(result.summary)
@@ -75,19 +70,13 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
     setTranslation('Translating...')
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      const response = await fetch(`${apiBaseUrl}/translate`, {
+      const result = await apiRequest('/translate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           text: extractedText,
           targetLang: targetLanguage
         })
       })
-
-      const result = await response.json()
 
       if (result.translations && Array.isArray(result.translations)) {
         setTranslation(result.translations.join('\n'))
@@ -121,19 +110,13 @@ function ResultsTabs({ extractedText, gradeLevel, onReset }) {
     setAnswer('Thinking...')
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-      const response = await fetch(`${apiBaseUrl}/qa`, {
+      const result = await apiRequest('/qa', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           text: extractedText,
           question: question.trim()
         })
       })
-
-      const result = await response.json()
 
       if (result.answer) {
         setAnswer(result.answer)
